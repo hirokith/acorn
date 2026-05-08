@@ -146,7 +146,7 @@ pnpm build
 Compiled output lands in `out/`. To package distributable binaries:
 
 ```bash
-pnpm dist        # all platforms
+pnpm dist        # current platform
 pnpm dist:mac    # macOS (.dmg, .zip)
 pnpm dist:win    # Windows (.exe)
 pnpm dist:linux  # Linux (.AppImage, .deb)
