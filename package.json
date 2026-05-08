@@ -1,0 +1,52 @@
+{
+  "name": "acorn",
+  "version": "1.0.0",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hirokith/acorn.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hirokith/acorn/issues"
+  },
+  "homepage": "https://github.com/hirokith/acorn#readme",
+  "description": "",
+  "devDependencies": {
+    "@electron-toolkit/preload": "^3.0.2",
+    "@electron-toolkit/utils": "^4.0.0",
+    "@tailwindcss/vite": "^4.2.4",
+    "@types/katex": "^0.16.8",
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron": "^42.0.0",
+    "electron-vite": "^5.0.0",
+    "tailwindcss": "^4.2.4",
+    "typescript": "^6.0.3",
+    "vite": "^7.3.3"
+  },
+  "dependencies": {
+    "@tailwindcss/typography": "^0.5.19",
+    "@types/uuid": "^10.0.0",
+    "electron-store": "^8.2.0",
+    "katex": "^0.16.45",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-markdown": "^10.1.0",
+    "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
+    "shiki": "^4.0.2",
+    "uuid": "^14.0.0",
+    "zustand": "^5.0.13"
+  }
+}
