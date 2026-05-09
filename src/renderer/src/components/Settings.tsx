@@ -166,7 +166,7 @@ export default function Settings() {
             name,
             transport: McpTransport.Stdio,
             command: config.command || '',
-            args: config.args || [],
+            args: Array.isArray(config.args) ? config.args : [],
             env: config.env,
           })
         }

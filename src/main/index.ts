@@ -291,7 +291,7 @@ app.whenReady().then(() => {
 
         const filePath = join(rootDir, urlPath)
         // Prevent directory traversal
-        if (!filePath.startsWith(rootDir)) {
+        if (!filePath.startsWith(rootDir + '/')) {
           res.writeHead(403)
           res.end('Forbidden')
           return

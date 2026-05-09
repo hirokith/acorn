@@ -106,6 +106,7 @@ export default function ChatInput() {
           <button
             onClick={handleSend}
             disabled={!canSend}
+            aria-label="Send message"
             className="shrink-0 p-1 bg-accent text-panel-bg rounded-sm hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <Send size={14} />

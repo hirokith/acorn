@@ -32,8 +32,9 @@ export const useMcpConfigStore = create<McpConfigState>((set) => ({
     try {
       const servers = await (window as any).acpApi.mcpConfig.list()
       set({ servers, loading: false })
-    } catch {
+    } catch (e) {
       set({ loading: false })
+      console.error('[mcpConfigStore] Failed to fetch servers:', e)
     }
   },
   addServer: async (server) => {

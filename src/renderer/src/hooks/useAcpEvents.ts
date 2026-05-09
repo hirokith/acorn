@@ -120,14 +120,14 @@ export function useAcpEvents(): void {
       }
 
       // Reset turn idle timer per session
-      const timerKey = sid || useChatStore.getState().activeSessionId || '__default'
-      const existingTimer = turnTimersRef.current.get(timerKey)
+      const resolvedSid = sid || useChatStore.getState().activeSessionId || '__default'
+      const existingTimer = turnTimersRef.current.get(resolvedSid)
       if (existingTimer) {
         clearTimeout(existingTimer)
       }
-      turnTimersRef.current.set(timerKey, setTimeout(() => {
-        setIsPrompting(false, sid)
-        turnTimersRef.current.delete(timerKey)
+      turnTimersRef.current.set(resolvedSid, setTimeout(() => {
+        setIsPrompting(false, resolvedSid)
+        turnTimersRef.current.delete(resolvedSid)
       }, 1500))
 
       // Dispatch to chatStore with sessionId

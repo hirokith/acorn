@@ -266,7 +266,7 @@ function HtmlPreview({ filePath, cwd }: { filePath: string; cwd: string }) {
     <iframe
       src={iframeUrl}
       className="w-full h-full border-0"
-      sandbox="allow-scripts allow-same-origin allow-forms"
+      sandbox="allow-scripts allow-forms"
       title="HTML Preview"
     />
   )
@@ -465,9 +465,19 @@ export default function OutputPreviewSidebar({ activeAgentId, onClose }: OutputP
     setPreview({ type: 'file', path: filePath, content: null, loading: true })
     try {
       const content = await (window as any).acpApi.fs.readFile(filePath)
-      setPreview({ type: 'file', path: filePath, content, loading: false })
+      setPreview((prev) => {
+        if (prev?.type === 'file' && prev.path === filePath) {
+          return { type: 'file', path: filePath, content, loading: false }
+        }
+        return prev
+      })
     } catch {
-      setPreview({ type: 'file', path: filePath, content: null, loading: false })
+      setPreview((prev) => {
+        if (prev?.type === 'file' && prev.path === filePath) {
+          return { type: 'file', path: filePath, content: null, loading: false }
+        }
+        return prev
+      })
     }
   }, [])
 

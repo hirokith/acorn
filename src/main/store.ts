@@ -48,6 +48,9 @@ const store = new Store<StoreSchema>({
 })
 
 function encryptEnv(env: Record<string, string>): Record<string, string> {
+  if (!safeStorage.isEncryptionAvailable()) {
+    return env
+  }
   const encrypted: Record<string, string> = {}
   for (const [key, value] of Object.entries(env)) {
     encrypted[key] = safeStorage.encryptString(value).toString('base64')
@@ -56,6 +59,9 @@ function encryptEnv(env: Record<string, string>): Record<string, string> {
 }
 
 function decryptEnv(encrypted: Record<string, string>): Record<string, string> {
+  if (!safeStorage.isEncryptionAvailable()) {
+    return encrypted
+  }
   const decrypted: Record<string, string> = {}
   for (const [key, value] of Object.entries(encrypted)) {
     decrypted[key] = safeStorage.decryptString(Buffer.from(value, 'base64'))

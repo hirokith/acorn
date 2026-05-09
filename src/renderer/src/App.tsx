@@ -70,7 +70,11 @@ function App(): JSX.Element {
 
   // Set active agent tab to first available
   useEffect(() => {
-    if (!activeAgentId && agents.length > 0) {
+    if (agents.length === 0) {
+      setActiveAgentId(null)
+      return
+    }
+    if (!activeAgentId || !agents.some((a) => a.id === activeAgentId)) {
       setActiveAgentId(agents[0].id)
     }
   }, [agents, activeAgentId])
