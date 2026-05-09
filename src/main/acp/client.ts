@@ -109,7 +109,7 @@ export class AcpClient extends EventEmitter {
 
   async initialize(): Promise<any> {
     return this.sendRequest('initialize', {
-      clientInfo: { name: 'Acorn', version: '1.0.0' },
+      clientInfo: { name: 'Axon', version: '1.0.0' },
       protocolVersion: 1,
       capabilities: {
         prompts: { text: true, embeddedContext: true }
@@ -117,10 +117,10 @@ export class AcpClient extends EventEmitter {
     })
   }
 
-  async createSession(cwd?: string): Promise<any> {
+  async createSession(cwd?: string, mcpServers?: any[]): Promise<any> {
     return this.sendRequest('session/new', {
       cwd: cwd || process.cwd(),
-      mcpServers: []
+      mcpServers: mcpServers || []
     })
   }
 

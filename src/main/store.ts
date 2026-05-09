@@ -19,13 +19,31 @@ interface StoredAgentConfig {
   encryptedEnv?: Record<string, string>
 }
 
+export interface McpServerConfig {
+  id: string
+  name: string
+  command: string
+  args: string[]
+  env?: Record<string, string>
+}
+
+interface StoredMcpServerConfig {
+  id: string
+  name: string
+  command: string
+  args: string[]
+  encryptedEnv?: Record<string, string>
+}
+
 interface StoreSchema {
   agents: StoredAgentConfig[]
+  mcpServers: StoredMcpServerConfig[]
 }
 
 const store = new Store<StoreSchema>({
   defaults: {
-    agents: []
+    agents: [],
+    mcpServers: []
   }
 })
 
@@ -87,4 +105,50 @@ export function updateAgent(id: string, updates: Partial<Omit<AgentConfig, 'id'>
 export function deleteAgent(id: string): void {
   const agents = store.get('agents').filter(a => a.id !== id)
   store.set('agents', agents)
+}
+
+// MCP Server config helpers
+
+function mcpToStored(server: McpServerConfig): StoredMcpServerConfig {
+  const { env, ...rest } = server
+  const stored: StoredMcpServerConfig = { ...rest }
+  if (env && Object.keys(env).length > 0) {
+    stored.encryptedEnv = encryptEnv(env)
+  }
+  return stored
+}
+
+function mcpFromStored(stored: StoredMcpServerConfig): McpServerConfig {
+  const { encryptedEnv, ...rest } = stored
+  const server: McpServerConfig = { ...rest }
+  if (encryptedEnv && Object.keys(encryptedEnv).length > 0) {
+    server.env = decryptEnv(encryptedEnv)
+  }
+  return server
+}
+
+export function getMcpServers(): McpServerConfig[] {
+  return store.get('mcpServers').map(mcpFromStored)
+}
+
+export function addMcpServer(server: McpServerConfig): void {
+  const servers = store.get('mcpServers')
+  servers.push(mcpToStored(server))
+  store.set('mcpServers', servers)
+}
+
+export function updateMcpServer(id: string, updates: Partial<Omit<McpServerConfig, 'id'>>): void {
+  const servers = store.get('mcpServers')
+  const idx = servers.findIndex(s => s.id === id)
+  if (idx !== -1) {
+    const current = mcpFromStored(servers[idx])
+    const updated = { ...current, ...updates }
+    servers[idx] = mcpToStored(updated)
+    store.set('mcpServers', servers)
+  }
+}
+
+export function deleteMcpServer(id: string): void {
+  const servers = store.get('mcpServers').filter(s => s.id !== id)
+  store.set('mcpServers', servers)
 }

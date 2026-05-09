@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useLogStore, LogEntryType, StructuredLogEntry } from '../stores/logStore'
 import { useChatStore } from '../stores/chatStore'
+import { SessionUpdateKind, ToolCallStatus, LogDirection } from '@shared/constants'
 
 const acpApi = (window as any).acpApi
 
@@ -11,31 +12,30 @@ function classifySessionUpdate(data: any): StructuredLogEntry {
   }
 
   const update = data.update
-  const sessionUpdate = update?.sessionUpdate
 
   // Classify based on sessionUpdate type
-  if (sessionUpdate === 'agent_thought_chunk' || sessionUpdate === 'thought_message_chunk') {
+  if (update?.sessionUpdate === SessionUpdateKind.AgentThoughtChunk || update?.sessionUpdate === SessionUpdateKind.ThoughtMessageChunk) {
     return {
       ...base,
-      type: 'thought' as LogEntryType,
+      type: LogEntryType.Thought,
       title: 'Thought',
       content: update.content?.text || JSON.stringify(update.content)
     }
   }
 
-  if (sessionUpdate === 'agent_message_chunk') {
+  if (update?.sessionUpdate === SessionUpdateKind.AgentMessageChunk) {
     return {
       ...base,
-      type: 'message' as LogEntryType,
+      type: LogEntryType.Message,
       title: 'Agent Message',
       content: update.content?.text || JSON.stringify(update.content)
     }
   }
 
-  if (sessionUpdate === 'tool_call') {
+  if (update?.sessionUpdate === SessionUpdateKind.ToolCall) {
     return {
       ...base,
-      type: 'tool_call' as LogEntryType,
+      type: LogEntryType.ToolCall,
       title: update.title || update.toolCallId || 'Tool Call',
       status: update.status,
       rawInput: update.rawInput,
@@ -43,10 +43,10 @@ function classifySessionUpdate(data: any): StructuredLogEntry {
     }
   }
 
-  if (sessionUpdate === 'tool_call_update') {
+  if (update?.sessionUpdate === SessionUpdateKind.ToolCallUpdate) {
     return {
       ...base,
-      type: 'tool_call' as LogEntryType,
+      type: LogEntryType.ToolCall,
       title: update.title || update.toolCallId || 'Tool Update',
       status: update.status,
       rawInput: update.rawInput,
@@ -55,10 +55,10 @@ function classifySessionUpdate(data: any): StructuredLogEntry {
     }
   }
 
-  if (sessionUpdate === 'turn_end' || sessionUpdate === 'done') {
+  if (update?.sessionUpdate === SessionUpdateKind.TurnEnd || update?.sessionUpdate === SessionUpdateKind.Done) {
     return {
       ...base,
-      type: 'message' as LogEntryType,
+      type: LogEntryType.Message,
       title: 'Turn End',
       content: ''
     }
@@ -67,8 +67,8 @@ function classifySessionUpdate(data: any): StructuredLogEntry {
   // Fallback
   return {
     ...base,
-    type: 'other' as LogEntryType,
-    title: sessionUpdate || data.method || 'Event',
+    type: LogEntryType.Other,
+    title: update?.sessionUpdate || data.method || 'Event',
     rawInput: data
   }
 }
@@ -78,7 +78,7 @@ export function useAcpEvents(): void {
   const addRawLog = useLogStore((s) => s.addRawLog)
   const loadRawLogs = useLogStore((s) => s.loadRawLogs)
 
-  const setConnected = useChatStore((s) => s.setConnected)
+  const removeConnectedAgent = useChatStore((s) => s.removeConnectedAgent)
   const appendAgentText = useChatStore((s) => s.appendAgentText)
   const appendThoughtText = useChatStore((s) => s.appendThoughtText)
   const addToolCall = useChatStore((s) => s.addToolCall)
@@ -86,7 +86,7 @@ export function useAcpEvents(): void {
   const addPermissionRequest = useChatStore((s) => s.addPermissionRequest)
   const setIsPrompting = useChatStore((s) => s.setIsPrompting)
 
-  const turnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const turnTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   useEffect(() => {
     if (!acpApi) return
@@ -96,11 +96,14 @@ export function useAcpEvents(): void {
       if (entries && entries.length > 0) {
         loadRawLogs(entries)
       }
+    }).catch((err: any) => {
+      console.error('[useAcpEvents] Failed to load log entries:', err)
     })
 
     // Subscribe to session updates - dispatch to both logStore and chatStore
     const unsubSession = acpApi.onSessionUpdate((params: any) => {
       const { update } = params
+      const sid = params.sessionId as string | undefined
 
       // Add as structured log
       const structured = classifySessionUpdate(params)
@@ -111,69 +114,78 @@ export function useAcpEvents(): void {
         addRawLog({
           id: crypto.randomUUID(),
           timestamp: Date.now(),
-          direction: params.direction || 'incoming',
+          direction: params.direction || LogDirection.Incoming,
           message: params.message || params
         })
       }
 
-      // Reset turn idle timer on every session update
-      if (turnTimerRef.current) {
-        clearTimeout(turnTimerRef.current)
+      // Reset turn idle timer per session
+      const timerKey = sid || useChatStore.getState().activeSessionId || '__default'
+      const existingTimer = turnTimersRef.current.get(timerKey)
+      if (existingTimer) {
+        clearTimeout(existingTimer)
       }
-      turnTimerRef.current = setTimeout(() => {
-        setIsPrompting(false)
-      }, 1500)
+      turnTimersRef.current.set(timerKey, setTimeout(() => {
+        setIsPrompting(false, sid)
+        turnTimersRef.current.delete(timerKey)
+      }, 1500))
 
       // Dispatch to chatStore with sessionId
       if (update) {
-        const sid = params.sessionId as string | undefined
+        console.log('[useAcpEvents] session-update:', { sessionUpdate: update.sessionUpdate, sid, activeSessionId: useChatStore.getState().activeSessionId, text: update.content?.text?.slice(0, 20) })
         switch (update.sessionUpdate) {
-          case 'agent_message_chunk':
+          case SessionUpdateKind.AgentMessageChunk:
             if (update.content?.text) {
               appendAgentText(update.content.text, sid)
             }
             break
-          case 'agent_thought_chunk':
+          case SessionUpdateKind.AgentThoughtChunk:
             if (update.content?.text) {
               appendThoughtText(update.content.text, sid)
             }
             break
-          case 'thought_message_chunk':
+          case SessionUpdateKind.ThoughtMessageChunk:
             if (update.content?.text) {
               appendThoughtText(update.content.text, sid)
             }
             break
-          case 'tool_call':
+          case SessionUpdateKind.ToolCall:
             addToolCall({
               toolCallId: update.toolCallId || '',
               title: update.title || '',
               kind: update.kind || 'other',
-              status: update.status === 'running' ? 'in_progress' : ((update.status as any) || 'pending'),
+              status: update.status === ToolCallStatus.Running ? ToolCallStatus.InProgress : ((update.status as any) || ToolCallStatus.Pending),
               rawInput: update.rawInput,
             }, sid)
             break
-          case 'tool_call_update':
+          case SessionUpdateKind.ToolCallUpdate:
             updateToolCall(update.toolCallId || '', {
-              ...(update.status ? { status: update.status === 'running' ? 'in_progress' : update.status as any } : {}),
+              ...(update.status ? { status: update.status === ToolCallStatus.Running ? ToolCallStatus.InProgress : update.status as any } : {}),
               ...(update.rawInput ? { rawInput: update.rawInput } : {}),
               ...(update.rawOutput ? { rawOutput: update.rawOutput } : {}),
               ...(update.content ? { content: update.content } : {}),
             }, sid)
             break
-          case 'turn_end':
-          case 'done':
+          case SessionUpdateKind.TurnEnd:
+          case SessionUpdateKind.Done:
             // Explicit turn-end signal
-            if (turnTimerRef.current) clearTimeout(turnTimerRef.current)
-            setIsPrompting(false)
+            const endKey = sid || useChatStore.getState().activeSessionId || '__default'
+            const endTimer = turnTimersRef.current.get(endKey)
+            if (endTimer) {
+              clearTimeout(endTimer)
+              turnTimersRef.current.delete(endKey)
+            }
+            setIsPrompting(false, sid)
             break
         }
       }
     })
 
-    // Subscribe to connection status - dispatch to chatStore
-    const unsubConnection = acpApi.onConnectionStatus((status: { connected: boolean }) => {
-      setConnected(status.connected)
-      // Don't clear sessions on disconnect - they are persisted for history
+    // Subscribe to connection status - handle per-agent disconnection
+    const unsubConnection = acpApi.onConnectionStatus((status: { connected: boolean; agentId?: string }) => {
+      if (!status.connected && status.agentId) {
+        removeConnectedAgent(status.agentId)
+      }
     })
 
     // Subscribe to permission requests - dispatch to chatStore
@@ -185,7 +197,8 @@ export function useAcpEvents(): void {
       unsubSession()
       unsubConnection()
       unsubPermission()
-      if (turnTimerRef.current) clearTimeout(turnTimerRef.current)
+      turnTimersRef.current.forEach((t) => clearTimeout(t))
+      turnTimersRef.current.clear()
     }
   }, [])
 }

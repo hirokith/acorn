@@ -69,3 +69,35 @@ body {
   font-size: 13px;
   line-height: 1.4;
 }
+
+@keyframes shimmer-text {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
+}
+
+.shimmer-loading {
+  background: linear-gradient(
+    90deg,
+    var(--text-subtle) 0%,
+    var(--text-subtle) 25%,
+    var(--text-primary) 50%,
+    var(--text-subtle) 75%,
+    var(--text-subtle) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer-text 2.5s ease-in-out infinite;
+}
+
+/* JSON syntax highlighting */
+.json-key { color: var(--thought); }
+.json-string { color: var(--success); }
+.json-number { color: var(--accent); }
+.json-boolean { color: var(--warning); }
+.json-null { color: var(--text-muted); }

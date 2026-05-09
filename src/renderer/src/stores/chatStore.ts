@@ -1,13 +1,14 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { MessageRole, ToolCallStatus } from '@shared/constants'
 
-export type MessageRole = 'user' | 'agent'
+export { MessageRole, ToolCallStatus }
 
 export interface ToolCallInfo {
   toolCallId: string
   title: string
   kind: string
-  status: 'pending' | 'in_progress' | 'completed' | 'failed'
+  status: ToolCallStatus
   rawInput?: any
   rawOutput?: any
   content?: any[]
@@ -26,6 +27,7 @@ export interface ChatMessage {
 
 export interface PermissionRequestInfo {
   id: number | string
+  agentId: string
   sessionId: string
   toolCall: { toolCallId: string; title?: string; rawInput?: any }
   options: Array<{ optionId: string; name: string; kind: string }>
@@ -33,24 +35,35 @@ export interface PermissionRequestInfo {
 
 export interface SessionData {
   sessionId: string
+  agentId: string
   messages: ChatMessage[]
   isPrompting: boolean
   label: string
   agentName?: string
 }
 
+export interface ConnectedAgent {
+  agentId: string
+  name: string
+}
+
 interface ChatState {
-  connected: boolean
-  connectedAgentName: string | null
+  connectedAgents: ConnectedAgent[]
   sessions: SessionData[]
   activeSessionId: string | null
   permissionRequests: PermissionRequestInfo[]
   sessionCounter: number
+  pendingNewSessionAgentId: string | null
 
-  setConnected: (connected: boolean, agentName?: string) => void
-  addSession: (sessionId: string) => void
+  addConnectedAgent: (agentId: string, name: string) => void
+  removeConnectedAgent: (agentId: string) => void
+  isAgentConnected: (agentId: string) => boolean
+
+  addSession: (sessionId: string, agentId: string, agentName?: string) => void
   switchSession: (sessionId: string) => void
   removeSession: (sessionId: string) => void
+  updateSessionId: (oldSessionId: string, newSessionId: string) => void
+  setPendingNewSessionAgentId: (agentId: string | null) => void
 
   addUserMessage: (text: string, sessionId?: string) => void
   appendAgentText: (text: string, sessionId?: string) => void
@@ -77,25 +90,37 @@ function updateSession(
 
 export const useChatStore = create<ChatState>()(
   persist(
-    (set) => ({
-      connected: false,
-      connectedAgentName: null,
+    (set, get) => ({
+      connectedAgents: [],
       sessions: [],
       activeSessionId: null,
       permissionRequests: [],
       sessionCounter: 0,
+      pendingNewSessionAgentId: null,
 
-      setConnected: (connected, agentName) => set({ connected, connectedAgentName: connected ? (agentName || null) : null }),
+      addConnectedAgent: (agentId, name) =>
+        set((state) => {
+          if (state.connectedAgents.some((a) => a.agentId === agentId)) return state
+          return { connectedAgents: [...state.connectedAgents, { agentId, name }] }
+        }),
 
-      addSession: (sessionId) =>
+      removeConnectedAgent: (agentId) =>
+        set((state) => ({
+          connectedAgents: state.connectedAgents.filter((a) => a.agentId !== agentId),
+        })),
+
+      isAgentConnected: (agentId) => get().connectedAgents.some((a) => a.agentId === agentId),
+
+      addSession: (sessionId, agentId, agentName?) =>
         set((state) => {
           const newCounter = state.sessionCounter + 1
           const newSession: SessionData = {
             sessionId,
+            agentId,
             messages: [],
             isPrompting: false,
-            label: `Session ${newCounter}`,
-            agentName: state.connectedAgentName || undefined,
+            label: 'New Session',
+            agentName,
           }
           return {
             sessions: [...state.sessions, newSession],
@@ -116,20 +141,33 @@ export const useChatStore = create<ChatState>()(
           return { sessions, activeSessionId }
         }),
 
+      updateSessionId: (oldSessionId, newSessionId) =>
+        set((state) => ({
+          sessions: state.sessions.map((s) =>
+            s.sessionId === oldSessionId ? { ...s, sessionId: newSessionId } : s
+          ),
+          activeSessionId: state.activeSessionId === oldSessionId ? newSessionId : state.activeSessionId,
+        })),
+
       addUserMessage: (text, sessionId?) =>
         set((state) => ({
-          sessions: updateSession(state.sessions, sessionId, state.activeSessionId, (s) => ({
-            ...s,
-            messages: [
-              ...s.messages,
-              {
-                id: crypto.randomUUID(),
-                role: 'user' as MessageRole,
-                text,
-                timestamp: Date.now(),
-              },
-            ],
-          })),
+          sessions: updateSession(state.sessions, sessionId, state.activeSessionId, (s) => {
+            const isFirstUserMessage = !s.messages.some((m) => m.role === MessageRole.User)
+            const newLabel = isFirstUserMessage ? text.slice(0, 30) + (text.length > 30 ? '...' : '') : s.label
+            return {
+              ...s,
+              label: newLabel,
+              messages: [
+                ...s.messages,
+                {
+                  id: crypto.randomUUID(),
+                  role: MessageRole.User,
+                  text,
+                  timestamp: Date.now(),
+                },
+              ],
+            }
+          }),
         })),
 
       appendAgentText: (text, sessionId?) =>
@@ -137,12 +175,12 @@ export const useChatStore = create<ChatState>()(
           sessions: updateSession(state.sessions, sessionId, state.activeSessionId, (s) => {
             const msgs = [...s.messages]
             const last = msgs[msgs.length - 1]
-            if (last && last.role === 'agent' && !last.isThought) {
+            if (last && last.role === MessageRole.Agent && !last.isThought) {
               msgs[msgs.length - 1] = { ...last, text: last.text + text }
             } else {
               msgs.push({
                 id: crypto.randomUUID(),
-                role: 'agent',
+                role: MessageRole.Agent,
                 text,
                 timestamp: Date.now(),
               })
@@ -156,12 +194,12 @@ export const useChatStore = create<ChatState>()(
           sessions: updateSession(state.sessions, sessionId, state.activeSessionId, (s) => {
             const msgs = [...s.messages]
             const last = msgs[msgs.length - 1]
-            if (last && last.role === 'agent' && last.isThought) {
+            if (last && last.role === MessageRole.Agent && last.isThought) {
               msgs[msgs.length - 1] = { ...last, text: last.text + text }
             } else {
               msgs.push({
                 id: crypto.randomUUID(),
-                role: 'agent',
+                role: MessageRole.Agent,
                 text,
                 timestamp: Date.now(),
                 isThought: true,
@@ -177,13 +215,13 @@ export const useChatStore = create<ChatState>()(
             const msgs = [...s.messages]
             const last = msgs[msgs.length - 1]
             const tcWithTime = { ...tc, startTime: Date.now() }
-            if (last && last.role === 'agent' && !last.isThought) {
+            if (last && last.role === MessageRole.Agent && !last.isThought) {
               const toolCalls = [...(last.toolCalls || []), tcWithTime]
               msgs[msgs.length - 1] = { ...last, toolCalls }
             } else {
               msgs.push({
                 id: crypto.randomUUID(),
-                role: 'agent',
+                role: MessageRole.Agent,
                 text: '',
                 timestamp: Date.now(),
                 toolCalls: [tcWithTime],
@@ -201,7 +239,7 @@ export const useChatStore = create<ChatState>()(
               const idx = msg.toolCalls.findIndex((tc) => tc.toolCallId === toolCallId)
               if (idx === -1) return msg
               const toolCalls = [...msg.toolCalls]
-              const endTime = (updates.status === 'completed' || updates.status === 'failed') ? Date.now() : undefined
+              const endTime = (updates.status === ToolCallStatus.Completed || updates.status === ToolCallStatus.Failed) ? Date.now() : undefined
               toolCalls[idx] = { ...toolCalls[idx], ...updates, ...(endTime ? { endTime } : {}) }
               return { ...msg, toolCalls }
             })
@@ -228,6 +266,7 @@ export const useChatStore = create<ChatState>()(
         })),
 
       clearSessions: () => set({ sessions: [], activeSessionId: null, sessionCounter: 0, permissionRequests: [] }),
+      setPendingNewSessionAgentId: (agentId) => set({ pendingNewSessionAgentId: agentId }),
     }),
     {
       name: 'acp-chat-history',

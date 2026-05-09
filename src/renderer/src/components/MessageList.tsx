@@ -4,8 +4,20 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
-import { useChatStore, ChatMessage } from '../stores/chatStore'
+import { useChatStore, ChatMessage, MessageRole } from '../stores/chatStore'
 import ToolCallCard from './ToolCallCard'
+
+function useIsDark() {
+  const [isDark, setIsDark] = useState(() => document.documentElement.getAttribute('data-theme') !== 'light')
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.getAttribute('data-theme') !== 'light')
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => observer.disconnect()
+  }, [])
+  return isDark
+}
 
 const EMPTY_MESSAGES: ChatMessage[] = []
 
@@ -45,7 +57,8 @@ function CopyButton({ text }: { text: string }) {
 }
 
 function MessageBubble({ message }: { message: ChatMessage }) {
-  if (message.role === 'user') {
+  const isDark = useIsDark()
+  if (message.role === MessageRole.User) {
     return (
       <div className="group px-4 py-2 hover:bg-surface-hover bg-accent/5 border-l-2 border-l-accent">
         <div className="flex items-center gap-2 mb-1">
@@ -75,7 +88,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         </div>
       </div>
       {message.text && (
-        <div className="text-sm text-text prose prose-sm prose-invert max-w-none [&_pre]:bg-panel-bg [&_pre]:border [&_pre]:border-border [&_code]:text-warning [&_a]:text-accent">
+        <div className={`text-sm text-text prose prose-sm max-w-none ${isDark ? 'prose-invert' : ''} [&_pre]:bg-panel-bg [&_pre]:border [&_pre]:border-border [&_code]:text-warning [&_a]:text-accent`}>
           <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>{message.text}</ReactMarkdown>
         </div>
       )}
@@ -92,6 +105,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 
 function AgentGroup({ thoughts, agentMsgs }: { thoughts: ChatMessage[]; agentMsgs: ChatMessage[] }) {
   const [showThoughts, setShowThoughts] = useState(false)
+  const isDark = useIsDark()
   const thoughtText = thoughts.map((t) => t.text).join('')
   const combinedText = agentMsgs.map((m) => m.text).filter(Boolean).join('')
   const allToolCalls = agentMsgs.flatMap((m) => m.toolCalls || [])
@@ -117,7 +131,7 @@ function AgentGroup({ thoughts, agentMsgs }: { thoughts: ChatMessage[]; agentMsg
             className="flex items-center gap-1 text-[11px] text-thought/60 hover:text-thought/80 transition-colors"
           >
             <span>{showThoughts ? '▾' : '▸'}</span>
-            <span>💭 Thinking</span>
+            <span>Thinking</span>
             {!showThoughts && (
               <span className="text-text-subtle ml-1 truncate max-w-[300px]">
                 {thoughtText.slice(0, 60)}...
@@ -134,7 +148,7 @@ function AgentGroup({ thoughts, agentMsgs }: { thoughts: ChatMessage[]; agentMsg
 
       {/* Agent response */}
       {combinedText && (
-        <div className="text-sm text-text prose prose-sm prose-invert max-w-none [&_pre]:bg-panel-bg [&_pre]:border [&_pre]:border-border [&_code]:text-warning [&_a]:text-accent">
+        <div className={`text-sm text-text prose prose-sm max-w-none ${isDark ? 'prose-invert' : ''} [&_pre]:bg-panel-bg [&_pre]:border [&_pre]:border-border [&_code]:text-warning [&_a]:text-accent`}>
           <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>{combinedText}</ReactMarkdown>
         </div>
       )}
@@ -189,7 +203,7 @@ export default function MessageList() {
   for (const msg of messages) {
     if (msg.isThought) {
       pendingThoughts.push(msg)
-    } else if (msg.role === 'agent' || msg.role === 'assistant') {
+    } else if (msg.role === MessageRole.Agent || (msg.role as string) === 'assistant') {
       pendingAgentMsgs.push(msg)
     } else {
       flushAgent()
@@ -200,7 +214,7 @@ export default function MessageList() {
 
   // Show loading when prompting and no agent response yet
   const lastMsg = messages[messages.length - 1]
-  const showLoading = isPrompting && (!lastMsg || lastMsg.role === 'user')
+  const showLoading = isPrompting && (!lastMsg || lastMsg.role === MessageRole.User)
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -217,11 +231,7 @@ export default function MessageList() {
         <div className="px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-success">Agent</span>
-            <span className="flex gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-[pulse_1.2s_0ms_infinite]" />
-              <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-[pulse_1.2s_200ms_infinite]" />
-              <span className="w-1.5 h-1.5 rounded-full bg-text-muted animate-[pulse_1.2s_400ms_infinite]" />
-            </span>
+            <span className="text-xs shimmer-loading">Generating...</span>
           </div>
         </div>
       )}

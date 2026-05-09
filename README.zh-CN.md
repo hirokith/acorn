@@ -1,5 +1,5 @@
 <h1 align="center">
-  🌰 Acorn
+  ⚡ Axon
 </h1>
 
 <p align="center">
@@ -11,7 +11,7 @@
   <img src="https://img.shields.io/badge/平台-macOS%20%7C%20Windows%20%7C%20Linux-blue" alt="Platform" />
   <img src="https://img.shields.io/badge/协议-ACP-purple" alt="ACP" />
   <img src="https://img.shields.io/badge/技术栈-Electron%20%2B%20React-teal" alt="Built with" />
-  <img src="https://img.shields.io/github/license/hirokith/acorn" alt="License" />
+  <img src="https://img.shields.io/github/license/hirokith/axon" alt="License" />
 </p>
 
 <p align="center">
@@ -24,7 +24,7 @@
 
 ---
 
-## 🤔 为什么选 Acorn？
+## 🤔 为什么选 Axon？
 
 AI Agent 很强大——但调试它们简直是噩梦：
 
@@ -32,7 +32,7 @@ AI Agent 很强大——但调试它们简直是噩梦：
 > 😵‍💫 "回复之前到底在*想*什么？"  
 > 🫠 "能不能不打开 Wireshark 就**看到** JSON-RPC？"
 
-**Acorn 解决了这一切。** 一个应用，连接你的 Agent，实时观察所有过程——思考、工具调用、输出、原始协议消息——在一个漂亮的原生桌面界面里。
+**Axon 解决了这一切。** 一个应用，连接你的 Agent，实时观察所有过程——思考、工具调用、输出、原始协议消息——在一个漂亮的原生桌面界面里。
 
 ---
 
@@ -44,6 +44,21 @@ AI Agent 很强大——但调试它们简直是噩梦：
 - 完整的 Markdown + LaTeX 数学公式渲染
 - 多会话管理，历史记录持久化（重启不丢！）
 - 流式 token 展示 + 实时思考过程
+- 每个会话独立工作目录 —— 不同对话可以针对不同项目
+
+### 🤖 多 Agent 并行
+
+- **同时连接和使用多个 Agent**
+- Tab 标签页 UI —— 每个 Agent 拥有独立工作区
+- 启动时自动连接 —— 所有配置的 Agent 自动启动
+- 会话自动恢复 —— 会话丢失时自动重建，无感知
+
+### 🔌 MCP Server 管理
+
+- 配置 MCP 服务器（支持 stdio 和 HTTP 两种传输方式）
+- 创建会话时可挂载指定的 MCP Server
+- 完整增删改查 —— 在设置中管理所有 MCP Server
+- 支持 JSON 导入模式批量配置
 
 ### 🔍 Agent 可观测性
 
@@ -58,10 +73,17 @@ AI Agent 很强大——但调试它们简直是噩梦：
 - 按类型过滤，按内容搜索
 - 几秒钟定位问题，不再花几小时
 
+### 📂 文件系统访问
+
+- 浏览 Agent 工作目录下的文件
+- 在应用内直接查看文件内容
+- 内置静态 HTTP 服务器，可本地预览文件
+
 ### ⚙️ 配置管理
 
 - 添加任意数量的 ACP Agent，自定义命令、参数、环境变量
 - 一键切换不同 Agent
+- 原生目录选择器，快速设定工作目录
 - 兼容**任何** ACP 协议的 Agent —— 零厂商锁定
 
 ---
@@ -70,26 +92,26 @@ AI Agent 很强大——但调试它们简直是噩梦：
 
 ### 下载安装
 
-从 [**GitHub Releases**](https://github.com/hirokith/acorn/releases) 获取最新版本：
+从 [**GitHub Releases**](https://github.com/hirokith/axon/releases) 获取最新版本：
 
 | 平台 | 文件 |
 |------|------|
-| macOS (Apple Silicon) | `Acorn-x.x.x-arm64.dmg` |
-| macOS (Intel) | `Acorn-x.x.x-x64.dmg` |
-| Windows | `Acorn-x.x.x-Setup.exe` |
-| Linux | `Acorn-x.x.x.AppImage` / `.deb` |
+| macOS (Apple Silicon) | `Axon-x.x.x-arm64.dmg` |
+| macOS (Intel) | `Axon-x.x.x-x64.dmg` |
+| Windows | `Axon-x.x.x-Setup.exe` |
+| Linux | `Axon-x.x.x.AppImage` / `.deb` |
 
 > [!NOTE]
 > **macOS 用户**：首次打开可能提示「无法验证开发者」。右键点击 app → 选择「打开」→ 再点「打开」即可（仅需一次）。  
-> 或在终端执行：`xattr -cr /Applications/Acorn.app`
+> 或在终端执行：`xattr -cr /Applications/Axon.app`
 >
 > **Windows 用户**：SmartScreen 可能弹出警告，点击「更多信息」→「仍要运行」。
 
 ### 从源码运行
 
 ```bash
-git clone https://github.com/hirokith/acorn.git
-cd acorn
+git clone https://github.com/hirokith/axon.git
+cd axon
 pnpm install
 pnpm dev
 ```
@@ -121,25 +143,28 @@ pnpm dev
 | | 技术 |
 |---|-----|
 | 🖥️ 框架 | Electron 42 |
-| ⚛️ 前端 | React 18 + TypeScript |
+| ⚛️ 前端 | React 19 + TypeScript |
 | ⚡ 构建 | electron-vite + Vite 7 |
 | 🎨 样式 | Tailwind CSS v4 |
 | 🗃️ 状态 | Zustand（持久化） |
 | 🌈 语法高亮 | Shiki |
 | 📐 数学公式 | KaTeX |
 | 📝 Markdown | react-markdown + remark-gfm |
+| 🎯 图标 | Lucide React |
 
 ---
 
 ## 📡 协议支持
 
-Acorn 通过 stdio 原生实现 [ACP 协议](https://agentclientprotocol.com)：
+Axon 通过 stdio 原生实现 [ACP 协议](https://agentclientprotocol.com)：
 
 - ✅ `initialize` 握手
-- ✅ `session/new` + `session/prompt`
+- ✅ `session/new` + `session/prompt`，支持会话级 CWD 和 MCP 配置
 - ✅ 流式 `session/update`（思考、消息、工具调用）
 - ✅ 权限请求弹窗
 - ✅ 优雅断开连接
+- ✅ 多 Agent 并发连接
+- ✅ MCP Server 透传（stdio 和 HTTP 传输）
 
 ---
 

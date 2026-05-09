@@ -3,6 +3,9 @@ import Settings from './components/Settings'
 import Chat from './components/Chat'
 import LogPanel from './components/LogPanel'
 import { useAcpEvents } from './hooks/useAcpEvents'
+import { useAgentConfigStore } from './stores/agentConfigStore'
+import { useChatStore } from './stores/chatStore'
+import { Settings as SettingsIcon } from 'lucide-react'
 
 function ThemeToggle() {
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -34,11 +37,70 @@ function ThemeToggle() {
 }
 
 function App(): JSX.Element {
-  const [tab, setTab] = useState<'chat' | 'settings'>('chat')
+  const [view, setView] = useState<'agents' | 'settings'>('agents')
   const [logPanelHeight, setLogPanelHeight] = useState(240)
+  const [showLogPanel, setShowLogPanel] = useState(false)
   const draggingRef = useRef(false)
 
+  const { agents, fetchAgents } = useAgentConfigStore()
+  const connectedAgents = useChatStore((s) => s.connectedAgents)
+  const addConnectedAgent = useChatStore((s) => s.addConnectedAgent)
+  const setPendingNewSessionAgentId = useChatStore((s) => s.setPendingNewSessionAgentId)
+
+  const [activeAgentId, setActiveAgentId] = useState<string | null>(null)
+  const [connectingAgents, setConnectingAgents] = useState<Set<string>>(new Set())
+  const [failedAgents, setFailedAgents] = useState<Set<string>>(new Set())
+
   useAcpEvents()
+
+  useEffect(() => {
+    fetchAgents()
+  }, [])
+
+  // Auto-connect agents on startup
+  useEffect(() => {
+    if (agents.length === 0) return
+    agents.forEach((agent) => {
+      const alreadyConnected = connectedAgents.some((c) => c.agentId === agent.id)
+      if (!alreadyConnected && !connectingAgents.has(agent.id) && !failedAgents.has(agent.id)) {
+        connectAgent(agent.id)
+      }
+    })
+  }, [agents])
+
+  // Set active agent tab to first available
+  useEffect(() => {
+    if (!activeAgentId && agents.length > 0) {
+      setActiveAgentId(agents[0].id)
+    }
+  }, [agents, activeAgentId])
+
+  const connectAgent = async (agentId: string) => {
+    const agent = agents.find((a) => a.id === agentId)
+    if (!agent) return
+    setConnectingAgents((s) => new Set(s).add(agentId))
+    setFailedAgents((s) => { const n = new Set(s); n.delete(agentId); return n })
+    try {
+      await (window as any).acpApi.connectAgent({
+        agentId: agent.id,
+        command: agent.command,
+        args: agent.args,
+        cwd: agent.cwd,
+        env: agent.env,
+      })
+      addConnectedAgent(agent.id, agent.name)
+      // Only trigger "New Session" dialog if the agent has no existing sessions
+      const existingSessions = useChatStore.getState().sessions.filter((s) => s.agentId === agent.id)
+      if (existingSessions.length === 0) {
+        setPendingNewSessionAgentId(agent.id)
+      }
+    } catch (e: any) {
+      console.error('connectAgent error:', e)
+      setFailedAgents((s) => new Set(s).add(agentId))
+    } finally {
+      setConnectingAgents((s) => { const n = new Set(s); n.delete(agentId); return n })
+    }
+  }
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
@@ -63,57 +125,99 @@ function App(): JSX.Element {
     document.addEventListener('mouseup', onMouseUp)
   }, [logPanelHeight])
 
+  const hasAgents = agents.length > 0
+
   return (
     <div className="flex flex-col h-screen bg-editor-bg text-text select-none">
       {/* Title bar / Tab bar */}
       <div className="flex items-center h-9 bg-sidebar-bg border-b border-border shrink-0 draggable">
-        <div className="flex items-center h-full no-drag">
-          <button
-            onClick={() => setTab('chat')}
-            className={`px-4 h-full text-xs font-medium border-r border-border transition-colors ${
-              tab === 'chat'
-                ? 'bg-editor-bg text-text border-t-2 border-t-accent'
-                : 'text-text-muted hover:text-text'
-            }`}
-          >
-            Chat
-          </button>
-          <button
-            onClick={() => setTab('settings')}
-            className={`px-4 h-full text-xs font-medium border-r border-border transition-colors ${
-              tab === 'settings'
-                ? 'bg-editor-bg text-text border-t-2 border-t-accent'
-                : 'text-text-muted hover:text-text'
-            }`}
-          >
-            Settings
-          </button>
+        <div className="flex items-center h-full no-drag overflow-x-auto">
+          {agents.map((agent) => {
+            const isConnected = connectedAgents.some((c) => c.agentId === agent.id)
+            const isConnecting = connectingAgents.has(agent.id)
+            const isFailed = failedAgents.has(agent.id)
+            return (
+              <button
+                key={agent.id}
+                onClick={() => { setActiveAgentId(agent.id); setView('agents') }}
+                className={`flex items-center gap-1.5 px-3 h-full text-xs font-medium border-r border-border transition-colors ${
+                  view === 'agents' && activeAgentId === agent.id
+                    ? 'bg-editor-bg text-text border-t-2 border-t-accent'
+                    : 'text-text-muted hover:text-text'
+                }`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    isConnected ? 'bg-success' : isConnecting ? 'bg-warning animate-pulse' : isFailed ? 'bg-error' : 'bg-text-subtle'
+                  }`}
+                />
+                {agent.name}
+                {isFailed && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); connectAgent(agent.id) }}
+                    className="text-[10px] text-error hover:text-warning ml-1"
+                    title="Retry connection"
+                  >
+                    ↻
+                  </button>
+                )}
+              </button>
+            )
+          })}
         </div>
         <div className="flex-1" />
-        <ThemeToggle />
-        <span className="text-text-muted text-xs pr-3 no-drag">Acorn</span>
+        <div className="flex items-center gap-1 pr-3 no-drag">
+          <ThemeToggle />
+          <button
+            onClick={() => setView(view === 'settings' ? 'agents' : 'settings')}
+            className={`p-1 rounded-sm transition-colors ${
+              view === 'settings' ? 'text-accent bg-surface-hover' : 'text-text-muted hover:text-text hover:bg-surface-hover'
+            }`}
+            title="Settings"
+          >
+            <SettingsIcon className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* Main content */}
       <div className="flex-1 overflow-hidden">
-        {tab === 'chat' && <Chat />}
-        {tab === 'settings' && (
+        {view === 'settings' ? (
           <div className="h-full overflow-auto">
             <Settings />
           </div>
+        ) : !hasAgents ? (
+          <div className="flex-1 h-full flex items-center justify-center">
+            <div className="text-center max-w-sm">
+              <p className="text-sm text-text-muted mb-2">No agents configured yet</p>
+              <p className="text-xs text-text-subtle mb-4">Add an agent in Settings to get started.</p>
+              <button
+                onClick={() => setView('settings')}
+                className="px-3 py-1.5 text-xs bg-accent text-panel-bg rounded-sm hover:opacity-90 font-medium"
+              >
+                Go to Settings
+              </button>
+            </div>
+          </div>
+        ) : (
+          <Chat activeAgentId={activeAgentId} showLogPanel={showLogPanel} onToggleLogPanel={() => setShowLogPanel(!showLogPanel)} />
         )}
       </div>
 
       {/* Resize handle */}
-      <div
-        onMouseDown={handleMouseDown}
-        className="h-[3px] bg-border hover:bg-accent cursor-row-resize shrink-0 transition-colors"
-      />
+      {showLogPanel && (
+        <div
+          onMouseDown={handleMouseDown}
+          className="h-px bg-border hover:bg-accent cursor-row-resize shrink-0 transition-colors"
+        />
+      )}
 
       {/* Log Panel */}
-      <div style={{ height: logPanelHeight }} className="shrink-0 overflow-hidden">
-        <LogPanel />
-      </div>
+      {showLogPanel && (
+        <div style={{ height: logPanelHeight }} className="shrink-0 overflow-hidden">
+          <LogPanel />
+        </div>
+      )}
     </div>
   )
 }
