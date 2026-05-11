@@ -1,5 +1,5 @@
 <h1 align="center">
-  🌰 Acorn
+  ⚡ Axon
 </h1>
 
 <p align="center">
@@ -11,7 +11,7 @@
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-blue" alt="Platform" />
   <img src="https://img.shields.io/badge/protocol-ACP-purple" alt="ACP" />
   <img src="https://img.shields.io/badge/built%20with-Electron%20%2B%20React-teal" alt="Built with" />
-  <img src="https://img.shields.io/github/license/hirokith/acorn" alt="License" />
+  <img src="https://img.shields.io/github/license/hirokith/axon" alt="License" />
 </p>
 
 <p align="center">
@@ -24,7 +24,7 @@
 
 ---
 
-## 🤔 Why Acorn?
+## 🤔 Why Axon?
 
 AI agents are powerful — but working with them today feels like talking to a black box:
 
@@ -32,7 +32,7 @@ AI agents are powerful — but working with them today feels like talking to a b
 > 😵‍💫 "What was it *thinking* before responding?"  
 > 🫠 "Can I just **see** the JSON-RPC without opening Wireshark?"
 
-**Acorn fixes all of that.** One app. Connect your agent. Watch everything unfold in real time — thoughts, tool calls, outputs, raw protocol messages — in a beautiful, native interface.
+**Axon fixes all of that.** One app. Connect your agent. Watch everything unfold in real time — thoughts, tool calls, outputs, raw protocol messages — in a beautiful, native interface.
 
 ---
 
@@ -43,6 +43,19 @@ AI agents are powerful — but working with them today feels like talking to a b
 - Full Markdown + LaTeX math rendering
 - Multi-session with persistent history (survives restarts!)
 - Streaming tokens with live thinking display
+- Per-session working directory — each conversation can target a different project
+
+### 🤖 Multi-Agent
+- Connect and interact with **multiple agents simultaneously**
+- Tab-based UI — each agent gets its own workspace
+- Auto-connect on startup — all configured agents spin up automatically
+- Session auto-recovery — if a session is lost, it's recreated transparently
+
+### 🔌 MCP Server Management
+- Configure MCP servers (stdio or HTTP transport)
+- Attach MCP servers to individual sessions at creation time
+- Full CRUD — add, edit, delete servers from Settings
+- JSON import mode for bulk configuration
 
 ### 🔍 Agent Observability
 - 🟢 **Structured logs** — thoughts, messages, and tool calls, color-coded
@@ -55,9 +68,15 @@ AI agents are powerful — but working with them today feels like talking to a b
 - Filter by type, search by content
 - Find bugs in seconds, not hours
 
+### 📂 File System Access
+- Browse agent working directory files
+- Read file contents directly in the app
+- Built-in static HTTP server for serving local files
+
 ### ⚙️ Configuration
 - Add unlimited ACP agents with custom commands, args, env vars
 - Switch between agents in one click
+- Native directory picker for CWD selection
 - Works with **any** ACP-compatible agent — zero vendor lock-in
 
 ---
@@ -66,26 +85,26 @@ AI agents are powerful — but working with them today feels like talking to a b
 
 ### Download
 
-Grab the latest release from [**GitHub Releases**](https://github.com/hirokith/acorn/releases):
+Grab the latest release from [**GitHub Releases**](https://github.com/hirokith/axon/releases):
 
 | Platform | File |
 |----------|------|
-| macOS (Apple Silicon) | `Acorn-x.x.x-arm64.dmg` |
-| macOS (Intel) | `Acorn-x.x.x-x64.dmg` |
-| Windows | `Acorn-x.x.x-Setup.exe` |
-| Linux | `Acorn-x.x.x.AppImage` / `.deb` |
+| macOS (Apple Silicon) | `Axon-x.x.x-arm64.dmg` |
+| macOS (Intel) | `Axon-x.x.x-x64.dmg` |
+| Windows | `Axon-x.x.x-Setup.exe` |
+| Linux | `Axon-x.x.x.AppImage` / `.deb` |
 
 > [!NOTE]
 > **macOS users**: On first launch, you may see "Cannot verify developer". Right-click the app → "Open" → click "Open" again (one-time only).  
-> Or run in terminal: `xattr -cr /Applications/Acorn.app`
+> Or run in terminal: `xattr -cr /Applications/Axon.app`
 >
 > **Windows users**: SmartScreen may show a warning. Click "More info" → "Run anyway".
 
 ### From Source
 
 ```bash
-git clone https://github.com/hirokith/acorn.git
-cd acorn
+git clone https://github.com/hirokith/axon.git
+cd axon
 pnpm install
 pnpm dev
 ```
@@ -122,18 +141,21 @@ That's it. You're running. 🎉
 | 🌈 Syntax | Shiki |
 | 📐 Math | KaTeX |
 | 📝 Markdown | react-markdown + remark-gfm |
+| 🎯 Icons | Lucide React |
 
 ---
 
 ## 📡 Protocol Support
 
-Acorn speaks [ACP](https://agentclientprotocol.com) natively over stdio:
+Axon speaks [ACP](https://agentclientprotocol.com) natively over stdio:
 
 - ✅ `initialize` handshake
-- ✅ `session/new` + `session/prompt`
+- ✅ `session/new` + `session/prompt` with per-session CWD and MCP config
 - ✅ Streaming `session/update` (thoughts, messages, tool calls)
 - ✅ Permission request dialogs
 - ✅ Graceful disconnect
+- ✅ Multi-agent concurrent connections
+- ✅ MCP server passthrough (stdio & HTTP transports)
 
 ---
 

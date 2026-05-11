@@ -1,12 +1,13 @@
 import { useState, useCallback, useEffect } from 'react'
 import { ToolCallInfo } from '../stores/chatStore'
+import { ToolCallStatus } from '@shared/constants'
 import ShikiCodeBlock from './ShikiCodeBlock'
 
 const statusColors: Record<string, string> = {
-  pending: 'text-warning',
-  in_progress: 'text-accent',
-  completed: 'text-success',
-  failed: 'text-error',
+  [ToolCallStatus.Pending]: 'text-warning',
+  [ToolCallStatus.InProgress]: 'text-accent',
+  [ToolCallStatus.Completed]: 'text-success',
+  [ToolCallStatus.Failed]: 'text-error',
 }
 
 function formatDuration(ms: number): string {
@@ -30,11 +31,7 @@ function ElapsedTimer({ startTime }: { startTime: number }) {
 
 function LoadingDots() {
   return (
-    <span className="inline-flex gap-0.5 ml-1">
-      <span className="w-1 h-1 rounded-full bg-accent animate-[bounce_1s_0ms_infinite]" />
-      <span className="w-1 h-1 rounded-full bg-accent animate-[bounce_1s_150ms_infinite]" />
-      <span className="w-1 h-1 rounded-full bg-accent animate-[bounce_1s_300ms_infinite]" />
-    </span>
+    <span className="ml-1 text-[10px] shimmer-loading">running...</span>
   )
 }
 

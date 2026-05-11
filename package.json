@@ -1,5 +1,5 @@
 {
-  "name": "acorn",
+  "name": "axon",
   "version": "1.0.0",
   "main": "./out/main/index.js",
   "scripts": {
@@ -10,23 +10,31 @@
     "dist": "electron-vite build && electron-builder",
     "dist:mac": "electron-vite build && electron-builder --mac",
     "dist:win": "electron-vite build && electron-builder --win",
-    "dist:linux": "electron-vite build && electron-builder --linux"
+    "dist:linux": "electron-vite build && electron-builder --linux",
+    "postinstall": "node scripts/patch-electron-name.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/hirokith/acorn.git"
+    "url": "git+https://github.com/hirokith/axon.git"
   },
-  "keywords": ["acp", "agent", "electron", "desktop", "ai"],
+  "keywords": [
+    "acp",
+    "agent",
+    "electron",
+    "desktop",
+    "ai"
+  ],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/hirokith/acorn/issues"
+    "url": "https://github.com/hirokith/axon/issues"
   },
-  "homepage": "https://github.com/hirokith/acorn#readme",
+  "homepage": "https://github.com/hirokith/axon#readme",
   "description": "A desktop client for ACP-powered AI Agents",
   "build": {
-    "appId": "com.acorn.app",
-    "productName": "Acorn",
+    "appId": "com.axon.app",
+    "productName": "Axon",
+    "icon": "src/logo.png",
     "directories": {
       "output": "release"
     },
@@ -36,13 +44,30 @@
     "mac": {
       "category": "public.app-category.developer-tools",
       "target": [
-        { "target": "dmg", "arch": ["x64", "arm64"] },
-        { "target": "zip", "arch": ["x64", "arm64"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ]
     },
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "nsis": {
@@ -52,8 +77,18 @@
     "linux": {
       "category": "Development",
       "target": [
-        { "target": "AppImage", "arch": ["x64"] },
-        { "target": "deb", "arch": ["x64"] }
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     }
   },
@@ -66,7 +101,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.2.0",
-    "electron": "^42.0.0",
+    "electron": "^42.0.1",
     "electron-builder": "^26.0.12",
     "electron-vite": "^5.0.0",
     "tailwindcss": "^4.2.4",
@@ -74,10 +109,12 @@
     "vite": "^7.3.3"
   },
   "dependencies": {
+    "@pierre/diffs": "^1.1.21",
     "@tailwindcss/typography": "^0.5.19",
     "@types/uuid": "^10.0.0",
     "electron-store": "^8.2.0",
     "katex": "^0.16.45",
+    "lucide-react": "^1.14.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-markdown": "^10.1.0",
@@ -86,6 +123,7 @@
     "remark-math": "^6.0.0",
     "shiki": "^4.0.2",
     "uuid": "^14.0.0",
+    "vscode-icons-js": "^11.6.1",
     "zustand": "^5.0.13"
   }
 }

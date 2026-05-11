@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { StructuredLogEntry } from '../stores/logStore'
+import { LogEntryType } from '@shared/constants'
 import { highlightJson } from '../utils/jsonHighlight'
 
 function formatTime(ts: number): string {
@@ -8,11 +9,11 @@ function formatTime(ts: number): string {
 }
 
 const typeBadgeColors: Record<string, string> = {
-  tool_call: 'text-accent',
-  thought: 'text-thought',
-  message: 'text-success',
-  plan: 'text-warning',
-  other: 'text-text-subtle'
+  [LogEntryType.ToolCall]: 'text-accent',
+  [LogEntryType.Thought]: 'text-thought',
+  [LogEntryType.Message]: 'text-success',
+  [LogEntryType.Plan]: 'text-warning',
+  [LogEntryType.Other]: 'text-text-subtle'
 }
 
 export default function StructuredLogItem({ entry }: { entry: StructuredLogEntry }) {
@@ -36,8 +37,8 @@ export default function StructuredLogItem({ entry }: { entry: StructuredLogEntry
         <span className="text-text-subtle font-mono text-[10px] shrink-0">
           {formatTime(entry.timestamp)}
         </span>
-        <span className={`font-medium ${typeBadgeColors[entry.type] || typeBadgeColors.other}`}>
-          {entry.type === 'tool_call' ? '⚡' : entry.type === 'thought' ? '💭' : entry.type === 'message' ? '💬' : '•'}
+        <span className={`font-medium ${typeBadgeColors[entry.type] || typeBadgeColors[LogEntryType.Other]}`}>
+          {entry.type === LogEntryType.ToolCall ? '⚡' : entry.type === LogEntryType.Thought ? '💭' : entry.type === LogEntryType.Message ? '💬' : '•'}
         </span>
         <span className="text-text truncate">{entry.title}</span>
         {entry.status && (
@@ -45,7 +46,7 @@ export default function StructuredLogItem({ entry }: { entry: StructuredLogEntry
         )}
       </div>
 
-      {entry.type === 'thought' && entry.content && !expanded && (
+      {entry.type === LogEntryType.Thought && entry.content && !expanded && (
         <p className="text-thought/60 italic text-[11px] mt-0.5 truncate pl-16">{entry.content}</p>
       )}
 

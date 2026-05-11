@@ -19,9 +19,9 @@ export function highlightJson(obj: any): string {
       // Check if this is a key (followed by colon)
       const afterStr = json.slice(end).match(/^\s*:/)
       if (afterStr) {
-        result.push(`<span class="text-purple-400">${escaped}</span>`)
+        result.push(`<span class="json-key">${escaped}</span>`)
       } else {
-        result.push(`<span class="text-green-400">${escaped}</span>`)
+        result.push(`<span class="json-string">${escaped}</span>`)
       }
       i = end
     }
@@ -29,18 +29,18 @@ export function highlightJson(obj: any): string {
     else if (/[\d\-]/.test(json[i]) && (i === 0 || /[,:\[\s]/.test(json[i - 1]))) {
       let end = i
       while (end < json.length && /[\d.eE+\-]/.test(json[end])) end++
-      result.push(`<span class="text-blue-400">${json.slice(i, end)}</span>`)
+      result.push(`<span class="json-number">${json.slice(i, end)}</span>`)
       i = end
     }
     // Boolean / null
     else if (json.slice(i, i + 4) === 'true') {
-      result.push('<span class="text-orange-400">true</span>')
+      result.push('<span class="json-boolean">true</span>')
       i += 4
     } else if (json.slice(i, i + 5) === 'false') {
-      result.push('<span class="text-orange-400">false</span>')
+      result.push('<span class="json-boolean">false</span>')
       i += 5
     } else if (json.slice(i, i + 4) === 'null') {
-      result.push('<span class="text-gray-500">null</span>')
+      result.push('<span class="json-null">null</span>')
       i += 4
     }
     // Other characters (whitespace, braces, brackets, commas, colons)

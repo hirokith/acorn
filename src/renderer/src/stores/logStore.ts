@@ -1,6 +1,7 @@
 import { create } from 'zustand'
+import { LogEntryType, LogDirection } from '@shared/constants'
 
-export type LogEntryType = 'tool_call' | 'thought' | 'message' | 'plan' | 'other'
+export { LogEntryType, LogDirection }
 
 export interface StructuredLogEntry {
   id: string
@@ -17,7 +18,7 @@ export interface StructuredLogEntry {
 export interface RawLogEntry {
   id: string
   timestamp: number
-  direction: 'outgoing' | 'incoming'
+  direction: LogDirection
   message: any
 }
 

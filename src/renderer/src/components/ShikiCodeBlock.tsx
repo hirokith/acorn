@@ -1,6 +1,18 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getHighlighter, detectLanguage } from '../utils/shikiHighlighter'
 
+function useIsDark() {
+  const [isDark, setIsDark] = useState(() => document.documentElement.getAttribute('data-theme') !== 'light')
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.getAttribute('data-theme') !== 'light')
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => observer.disconnect()
+  }, [])
+  return isDark
+}
+
 interface ShikiCodeBlockProps {
   label: string
   content: string
@@ -8,31 +20,37 @@ interface ShikiCodeBlockProps {
 }
 
 export default function ShikiCodeBlock({ label, content, maxHeight = 250 }: ShikiCodeBlockProps) {
-  const [html, setHtml] = useState<string>('')
+  const [htmlDark, setHtmlDark] = useState<string>('')
+  const [htmlLight, setHtmlLight] = useState<string>('')
   const [copied, setCopied] = useState(false)
+  const isDark = useIsDark()
 
   useEffect(() => {
     let cancelled = false
-    setHtml('')
+    setHtmlDark('')
+    setHtmlLight('')
     const lang = detectLanguage(content, label)
     
     getHighlighter().then((highlighter) => {
       if (cancelled) return
       try {
-        const result = highlighter.codeToHtml(content, {
-          lang,
-          theme: 'github-dark',
-        })
-        setHtml(result)
+        setHtmlDark(highlighter.codeToHtml(content, { lang, theme: 'github-dark' }))
       } catch {
-        // Fallback: just escape and wrap
         const escaped = content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        setHtml(`<pre class="shiki"><code>${escaped}</code></pre>`)
+        setHtmlDark(`<pre class="shiki"><code>${escaped}</code></pre>`)
+      }
+      try {
+        setHtmlLight(highlighter.codeToHtml(content, { lang, theme: 'github-light' }))
+      } catch {
+        const escaped = content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        setHtmlLight(`<pre class="shiki"><code>${escaped}</code></pre>`)
       }
     })
 
     return () => { cancelled = true }
   }, [content, label])
+
+  const html = isDark ? htmlDark : htmlLight
 
   const handleCopy = useCallback(async () => {
     try {
@@ -52,7 +70,7 @@ export default function ShikiCodeBlock({ label, content, maxHeight = 250 }: Shik
       </div>
       {html ? (
         <div
-          className="rounded-sm border border-border overflow-auto text-xs font-mono leading-relaxed [&_pre]:!bg-[#11111b] [&_pre]:p-2 [&_pre]:m-0 [&_pre]:min-w-full [&_pre]:w-fit [&_code]:!bg-transparent"
+          className="rounded-sm border border-border overflow-auto text-xs font-mono leading-relaxed [&_pre]:!bg-transparent [&_pre]:p-2 [&_pre]:m-0 [&_pre]:min-w-full [&_pre]:w-fit [&_code]:!bg-transparent"
           style={{ maxHeight }}
           dangerouslySetInnerHTML={{ __html: html }}
         />

@@ -11,11 +11,13 @@
     "outDir": "./out",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/renderer/src/*"]
+      "@/*": ["src/renderer/src/*"],
+      "@shared/*": ["src/shared/*"]
     },
     "lib": ["ESNext", "DOM", "DOM.Iterable"]
   },
   "include": [
-    "src/renderer/src/**/*"
+    "src/renderer/src/**/*",
+    "src/shared/**/*"
   ]
 }

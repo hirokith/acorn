@@ -111,7 +111,7 @@ export default function LogPanel() {
           onClick={clearLogs}
           className="text-[10px] text-text-subtle hover:text-error transition-colors"
         >
-          Clear
+          {'Clear'}
         </button>
       </div>
 

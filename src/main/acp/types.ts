@@ -1,4 +1,5 @@
 // ACP-specific protocol types
+import { ToolCallStatus, SessionUpdateKind as SharedSessionUpdateKind } from '../../shared/constants'
 
 // Content types
 export interface TextContent {
@@ -26,7 +27,7 @@ export interface ToolCall {
   toolCallId: string
   title: string
   kind?: string
-  status: 'pending' | 'running' | 'completed' | 'failed'
+  status: ToolCallStatus
   rawInput?: string
   rawOutput?: string
   content?: Content[]
@@ -34,10 +35,10 @@ export interface ToolCall {
 
 // Session update types
 export type SessionUpdateKind =
-  | 'agent_message_chunk'
-  | 'tool_call'
-  | 'tool_call_update'
-  | 'thought_message_chunk'
+  | SharedSessionUpdateKind.AgentMessageChunk
+  | SharedSessionUpdateKind.ToolCall
+  | SharedSessionUpdateKind.ToolCallUpdate
+  | SharedSessionUpdateKind.ThoughtMessageChunk
   | 'plan'
 
 export interface SessionUpdateBase {
@@ -46,17 +47,17 @@ export interface SessionUpdateBase {
 }
 
 export interface AgentMessageChunkUpdate extends SessionUpdateBase {
-  kind: 'agent_message_chunk'
+  kind: SharedSessionUpdateKind.AgentMessageChunk
   text: string
 }
 
 export interface ToolCallUpdate extends SessionUpdateBase {
-  kind: 'tool_call'
+  kind: SharedSessionUpdateKind.ToolCall
   toolCall: ToolCall
 }
 
 export interface ToolCallStatusUpdate extends SessionUpdateBase {
-  kind: 'tool_call_update'
+  kind: SharedSessionUpdateKind.ToolCallUpdate
   toolCallId: string
   status: ToolCall['status']
   rawOutput?: string
@@ -64,7 +65,7 @@ export interface ToolCallStatusUpdate extends SessionUpdateBase {
 }
 
 export interface ThoughtMessageChunkUpdate extends SessionUpdateBase {
-  kind: 'thought_message_chunk'
+  kind: SharedSessionUpdateKind.ThoughtMessageChunk
   text: string
 }
 
