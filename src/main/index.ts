@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell, ipcMain, dialog, nativeImage } from 'electro
 import { join } from 'path'
 import * as fs from 'fs'
 import * as http from 'http'
+import { execFileSync } from 'child_process'
 import { is } from '@electron-toolkit/utils'
 import { StdioTransport } from './acp/transport'
 import { AcpClient } from './acp/client'
@@ -10,6 +11,35 @@ import { AgentConfig } from './acp/types'
 import { JsonRpcMessage } from './acp/jsonrpc'
 import { getAgents, addAgent, updateAgent, deleteAgent, AgentConfig as StoredAgentConfig, getMcpServers, addMcpServer, updateMcpServer, deleteMcpServer, McpServerConfig as StoredMcpServerConfig } from './store'
 import { IpcChannel, LogDirection } from '../shared/constants'
+
+// Fix PATH for packaged app (macOS/Linux GUI launches don't inherit shell PATH)
+function fixPath(): void {
+  if (process.platform === 'win32') return
+  if (!app.isPackaged) return
+  try {
+    const shell = process.env.SHELL || '/bin/zsh'
+    const result = execFileSync(shell, ['-ilc', 'echo -n "_DELIMITER_"; printenv PATH; echo -n "_DELIMITER_"'], {
+      encoding: 'utf-8',
+      timeout: 5000
+    })
+    const match = result.match(/_DELIMITER_([\s\S]*?)_DELIMITER_/)
+    if (match?.[1]) {
+      process.env.PATH = match[1].trim()
+    }
+  } catch {
+    // Fallback: append common binary paths
+    const extra = [
+      '/usr/local/bin',
+      '/opt/homebrew/bin',
+      '/opt/homebrew/sbin',
+      `${process.env.HOME}/.nvm/versions/node/current/bin`,
+      `${process.env.HOME}/.local/bin`
+    ]
+    process.env.PATH = [...extra, process.env.PATH].filter(Boolean).join(':')
+  }
+}
+
+fixPath()
 
 interface AgentConnection {
   transport: StdioTransport
