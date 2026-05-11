@@ -1,6 +1,6 @@
 {
   "name": "axon",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
@@ -24,7 +24,10 @@
     "desktop",
     "ai"
   ],
-  "author": "",
+  "author": {
+    "name": "hirokith",
+    "email": "hirokith@users.noreply.github.com"
+  },
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/hirokith/axon/issues"
