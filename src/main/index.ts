@@ -9,7 +9,7 @@ import { AcpClient } from './acp/client'
 import { MessageLogger } from './acp/logger'
 import { AgentConfig } from './acp/types'
 import { JsonRpcMessage } from './acp/jsonrpc'
-import { queryLogs, clearLogs, closeDb, insertStructuredLog, queryStructuredLogs } from './db'
+import { queryLogs, clearLogs, closeDb, insertStructuredLog, queryStructuredLogs, getChatHistory, setChatHistory } from './db'
 import { getAgents, addAgent, updateAgent, deleteAgent, AgentConfig as StoredAgentConfig, getMcpServers, addMcpServer, updateMcpServer, deleteMcpServer, McpServerConfig as StoredMcpServerConfig } from './store'
 import { IpcChannel, LogDirection } from '../shared/constants'
 
@@ -278,6 +278,10 @@ app.whenReady().then(() => {
   ipcMain.handle(IpcChannel.McpServersAdd, (_, server: StoredMcpServerConfig) => { addMcpServer(server); return getMcpServers() })
   ipcMain.handle(IpcChannel.McpServersUpdate, (_, id: string, updates: Partial<StoredMcpServerConfig>) => { updateMcpServer(id, updates); return getMcpServers() })
   ipcMain.handle(IpcChannel.McpServersDelete, (_, id: string) => { deleteMcpServer(id); return getMcpServers() })
+
+  // Chat history IPC handlers
+  ipcMain.handle(IpcChannel.ChatHistoryGet, () => getChatHistory())
+  ipcMain.handle(IpcChannel.ChatHistorySet, (_, data: any) => setChatHistory(data))
 
   // Log query IPC handlers
   ipcMain.handle(IpcChannel.LogsQuery, (_, options?: any) => queryLogs(options || {}))

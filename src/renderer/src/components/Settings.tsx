@@ -261,7 +261,7 @@ export default function Settings() {
               {testingConnection ? 'Testing...' : 'Test Connection'}
             </button>
             {testResult && (
-              <div className={`mt-2 px-3 py-2 rounded-sm text-xs ${testResult.success ? 'bg-green-900/30 text-green-300' : 'bg-red-900/30 text-red-300'}`}>
+              <div className={`mt-2 px-3 py-2 rounded-sm text-xs ${testResult.success ? 'bg-success/15 text-success' : 'bg-error/15 text-error'}`}>
                 <span className="mr-1.5">{testResult.success ? '\u2705' : '\u274C'}</span>
                 {testResult.message}
               </div>

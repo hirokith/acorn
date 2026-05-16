@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import { MessageRole, ToolCallStatus } from '@shared/constants'
 
 export { MessageRole, ToolCallStatus }
@@ -270,6 +270,19 @@ export const useChatStore = create<ChatState>()(
     }),
     {
       name: 'acp-chat-history',
+      storage: createJSONStorage(() => ({
+        getItem: async (_name: string) => {
+          const data = await (window as any).acpApi.chatHistory.get()
+          return data ? JSON.stringify({ state: data }) : null
+        },
+        setItem: async (_name: string, value: string) => {
+          const parsed = JSON.parse(value)
+          await (window as any).acpApi.chatHistory.set(parsed.state)
+        },
+        removeItem: async () => {
+          await (window as any).acpApi.chatHistory.set(null)
+        },
+      })),
       partialize: (state) => ({
         sessions: state.sessions.map((s) => ({ ...s, isPrompting: false })),
         activeSessionId: state.activeSessionId,
