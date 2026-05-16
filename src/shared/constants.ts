@@ -25,6 +25,8 @@ export const IpcChannel = {
   FsStartStaticServer: 'fs:start-static-server',
   FsStopStaticServer: 'fs:stop-static-server',
   AcpTestConnection: 'acp:test-connection',
+  ChatHistoryGet: 'chat-history:get',
+  ChatHistorySet: 'chat-history:set',
 } as const
 
 export enum ToolCallStatus {

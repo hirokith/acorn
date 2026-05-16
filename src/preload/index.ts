@@ -36,6 +36,10 @@ const acpApi = {
     update: (id: string, updates: any) => ipcRenderer.invoke(IpcChannel.McpServersUpdate, id, updates),
     delete: (id: string) => ipcRenderer.invoke(IpcChannel.McpServersDelete, id),
   },
+  chatHistory: {
+    get: () => ipcRenderer.invoke(IpcChannel.ChatHistoryGet),
+    set: (data: any) => ipcRenderer.invoke(IpcChannel.ChatHistorySet, data),
+  },
   selectDirectory: () => ipcRenderer.invoke(IpcChannel.DialogSelectDirectory),
   openExternal: (url: string) => ipcRenderer.invoke(IpcChannel.ShellOpenExternal, url),
   fs: {

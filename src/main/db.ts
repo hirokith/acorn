@@ -69,6 +69,13 @@ async function getDb(): Promise<SqlJsDatabase> {
     db.run(`CREATE INDEX IF NOT EXISTS idx_slogs_timestamp ON structured_logs(timestamp)`)
     db.run(`CREATE INDEX IF NOT EXISTS idx_slogs_session ON structured_logs(session_id)`)
 
+    db.run(`
+      CREATE TABLE IF NOT EXISTS chat_history (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    `)
+
     return db
   })()
 
@@ -311,4 +318,32 @@ export function closeDb(): void {
     db.close()
     db = null
   }
+}
+
+// Chat history persistence (stored in SQLite instead of config.json)
+
+export async function getChatHistory(): Promise<any> {
+  const d = await getDb()
+  const stmt = d.prepare('SELECT value FROM chat_history WHERE key = ?')
+  stmt.bind(['state'])
+  let result = null
+  if (stmt.step()) {
+    const row = stmt.getAsObject() as any
+    try { result = JSON.parse(row.value) } catch {}
+  }
+  stmt.free()
+  return result
+}
+
+export async function setChatHistory(data: any): Promise<void> {
+  const d = await getDb()
+  if (data == null) {
+    d.run('DELETE FROM chat_history WHERE key = ?', ['state'])
+  } else {
+    d.run(
+      'INSERT OR REPLACE INTO chat_history (key, value) VALUES (?, ?)',
+      ['state', JSON.stringify(data)]
+    )
+  }
+  scheduleSave()
 }

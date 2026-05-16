@@ -69,8 +69,6 @@ export default function SessionSidebar({ activeAgentId }: { activeAgentId: strin
     }
   }, [dialogAgentId, newCwd, selectedMcpIds, mcpServersAll, addSession, connectedAgents])
 
-  if (!activeAgentId && sessions.length === 0 && !showNewDialog) return null
-
   const activeAgentSessions = activeAgentId
     ? sessions.filter((s) => s.agentId === activeAgentId).slice().reverse()
     : []
@@ -99,6 +97,8 @@ export default function SessionSidebar({ activeAgentId }: { activeAgentId: strin
 
     return groups.filter((g) => g.sessions.length > 0)
   }, [activeAgentSessions])
+
+  if (!activeAgentId && sessions.length === 0 && !showNewDialog) return null
 
   const activeAgent = connectedAgents.find((a) => a.agentId === activeAgentId)
 
