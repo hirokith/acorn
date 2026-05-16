@@ -6,6 +6,10 @@ export const IpcChannel = {
   AcpCancelPrompt: 'acp:cancel-prompt',
   AcpRespondPermission: 'acp:respond-permission',
   AcpGetLogEntries: 'acp:get-log-entries',
+  LogsQuery: 'logs:query',
+  LogsClear: 'logs:clear',
+  StructuredLogsInsert: 'structured-logs:insert',
+  StructuredLogsQuery: 'structured-logs:query',
   AgentsList: 'agents:list',
   AgentsAdd: 'agents:add',
   AgentsUpdate: 'agents:update',
@@ -15,10 +19,12 @@ export const IpcChannel = {
   McpServersUpdate: 'mcp-servers:update',
   McpServersDelete: 'mcp-servers:delete',
   DialogSelectDirectory: 'dialog:select-directory',
+  ShellOpenExternal: 'shell:open-external',
   FsListFiles: 'fs:list-files',
   FsReadFile: 'fs:read-file',
   FsStartStaticServer: 'fs:start-static-server',
   FsStopStaticServer: 'fs:stop-static-server',
+  AcpTestConnection: 'acp:test-connection',
 } as const
 
 export enum ToolCallStatus {

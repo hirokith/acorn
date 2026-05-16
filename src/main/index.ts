@@ -9,6 +9,7 @@ import { AcpClient } from './acp/client'
 import { MessageLogger } from './acp/logger'
 import { AgentConfig } from './acp/types'
 import { JsonRpcMessage } from './acp/jsonrpc'
+import { queryLogs, clearLogs, closeDb, insertStructuredLog, queryStructuredLogs } from './db'
 import { getAgents, addAgent, updateAgent, deleteAgent, AgentConfig as StoredAgentConfig, getMcpServers, addMcpServer, updateMcpServer, deleteMcpServer, McpServerConfig as StoredMcpServerConfig } from './store'
 import { IpcChannel, LogDirection } from '../shared/constants'
 
@@ -75,8 +76,12 @@ function createWindow(): void {
 }
 
 function sendToRenderer(channel: string, ...args: any[]): void {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send(channel, ...args)
+  if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
+    try {
+      mainWindow.webContents.send(channel, ...args)
+    } catch {
+      // Window may have been disposed during reload/close
+    }
   }
 }
 
@@ -96,7 +101,6 @@ function setupAcpHandlers(): void {
     if (connections.has(agentId)) {
       disconnectAgent(agentId)
     }
-    logger.clear()
 
     const transport = new StdioTransport({
       command: config.command,
@@ -109,13 +113,13 @@ function setupAcpHandlers(): void {
     // Wrap transport send to log outgoing messages
     const originalSend = transport.send.bind(transport)
     transport.send = (msg: JsonRpcMessage) => {
-      logger.log(LogDirection.Outgoing, msg)
+      logger.log(LogDirection.Outgoing, msg, agentId)
       console.log('[ACP outgoing]', JSON.stringify(msg))
       originalSend(msg)
     }
 
     transport.on('message', (msg: JsonRpcMessage) => {
-      logger.log(LogDirection.Incoming, msg)
+      logger.log(LogDirection.Incoming, msg, agentId)
       console.log('[ACP incoming]', JSON.stringify(msg))
     })
 
@@ -190,6 +194,31 @@ function setupAcpHandlers(): void {
     }
   })
 
+  ipcMain.handle(IpcChannel.AcpTestConnection, async (_event, config: { command: string; args?: string[]; cwd?: string; env?: Record<string, string> }) => {
+    const transport = new StdioTransport({
+      command: config.command,
+      args: config.args,
+      cwd: config.cwd,
+      env: config.env
+    })
+
+    try {
+      transport.start()
+      const client = new AcpClient(transport)
+      const timeoutMs = 10000
+      await Promise.race([
+        client.initialize(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Connection test timed out after 10s')), timeoutMs))
+      ])
+      transport.close()
+      return { success: true, message: 'Connection successful! CLI exists and ACP protocol is working.' }
+    } catch (err: any) {
+      transport.close()
+      const message = err instanceof Error ? err.message : JSON.stringify(err)
+      return { success: false, message: `Connection failed: ${message}` }
+    }
+  })
+
   ipcMain.handle(IpcChannel.AcpDisconnect, async (_event, agentId: string) => {
     disconnectAgent(agentId)
     sendToRenderer('acp:connection-status', { agentId, connected: false })
@@ -206,7 +235,7 @@ function setupAcpHandlers(): void {
   ipcMain.handle(IpcChannel.AcpSendPrompt, async (_event, agentId: string, sessionId: string, text: string) => {
     const conn = connections.get(agentId)
     if (!conn) throw new Error('Not connected')
-    conn.client.sendPrompt(sessionId, text)
+    await conn.client.sendPrompt(sessionId, text)
     return { sent: true }
   })
 
@@ -225,8 +254,8 @@ function setupAcpHandlers(): void {
     }
   )
 
-  ipcMain.handle(IpcChannel.AcpGetLogEntries, async () => {
-    return logger.getEntries()
+  ipcMain.handle(IpcChannel.AcpGetLogEntries, async (_event, options?: { limit?: number; offset?: number }) => {
+    return logger.getEntries(options)
   })
 }
 
@@ -250,10 +279,30 @@ app.whenReady().then(() => {
   ipcMain.handle(IpcChannel.McpServersUpdate, (_, id: string, updates: Partial<StoredMcpServerConfig>) => { updateMcpServer(id, updates); return getMcpServers() })
   ipcMain.handle(IpcChannel.McpServersDelete, (_, id: string) => { deleteMcpServer(id); return getMcpServers() })
 
+  // Log query IPC handlers
+  ipcMain.handle(IpcChannel.LogsQuery, (_, options?: any) => queryLogs(options || {}))
+  ipcMain.handle(IpcChannel.LogsClear, (_, options?: any) => clearLogs(options))
+  ipcMain.handle(IpcChannel.StructuredLogsInsert, (_, entry: any) => insertStructuredLog(entry))
+  ipcMain.handle(IpcChannel.StructuredLogsQuery, (_, options?: any) => queryStructuredLogs(options || {}))
+
   ipcMain.handle(IpcChannel.DialogSelectDirectory, async () => {
     const result = await dialog.showOpenDialog({ properties: ['openDirectory'] })
     if (result.canceled || result.filePaths.length === 0) return null
     return result.filePaths[0]
+  })
+
+  ipcMain.handle(IpcChannel.ShellOpenExternal, async (_event, url: string) => {
+    let parsed: URL
+    try {
+      parsed = new URL(url)
+    } catch {
+      throw new Error('Invalid URL')
+    }
+    if (!['http:', 'https:', 'file:'].includes(parsed.protocol)) {
+      throw new Error('Unsupported URL protocol')
+    }
+    const { shell } = await import('electron')
+    return shell.openExternal(parsed.toString())
   })
 
   ipcMain.handle(IpcChannel.FsListFiles, async (_event, dirPath: string) => {
@@ -390,4 +439,8 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+app.on('will-quit', () => {
+  closeDb()
 })
