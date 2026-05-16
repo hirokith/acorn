@@ -101,7 +101,6 @@ function setupAcpHandlers(): void {
     if (connections.has(agentId)) {
       disconnectAgent(agentId)
     }
-    logger.setContext(agentId)
 
     const transport = new StdioTransport({
       command: config.command,
@@ -114,13 +113,13 @@ function setupAcpHandlers(): void {
     // Wrap transport send to log outgoing messages
     const originalSend = transport.send.bind(transport)
     transport.send = (msg: JsonRpcMessage) => {
-      logger.log(LogDirection.Outgoing, msg)
+      logger.log(LogDirection.Outgoing, msg, agentId)
       console.log('[ACP outgoing]', JSON.stringify(msg))
       originalSend(msg)
     }
 
     transport.on('message', (msg: JsonRpcMessage) => {
-      logger.log(LogDirection.Incoming, msg)
+      logger.log(LogDirection.Incoming, msg, agentId)
       console.log('[ACP incoming]', JSON.stringify(msg))
     })
 
@@ -206,7 +205,11 @@ function setupAcpHandlers(): void {
     try {
       transport.start()
       const client = new AcpClient(transport)
-      await client.initialize()
+      const timeoutMs = 10000
+      await Promise.race([
+        client.initialize(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Connection test timed out after 10s')), timeoutMs))
+      ])
       transport.close()
       return { success: true, message: 'Connection successful! CLI exists and ACP protocol is working.' }
     } catch (err: any) {
@@ -289,8 +292,17 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle(IpcChannel.ShellOpenExternal, async (_event, url: string) => {
+    let parsed: URL
+    try {
+      parsed = new URL(url)
+    } catch {
+      throw new Error('Invalid URL')
+    }
+    if (!['http:', 'https:', 'file:'].includes(parsed.protocol)) {
+      throw new Error('Unsupported URL protocol')
+    }
     const { shell } = await import('electron')
-    return shell.openExternal(url)
+    return shell.openExternal(parsed.toString())
   })
 
   ipcMain.handle(IpcChannel.FsListFiles, async (_event, dirPath: string) => {

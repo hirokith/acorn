@@ -13,35 +13,26 @@ export interface LogEntry {
 }
 
 export class MessageLogger {
-  private agentId: string | null = null
-  private sessionId: string | null = null
-
-  setContext(agentId?: string, sessionId?: string): void {
-    if (agentId !== undefined) this.agentId = agentId
-    if (sessionId !== undefined) this.sessionId = sessionId
-  }
-
-  log(direction: LogDirection, message: JsonRpcMessage): void {
+  log(direction: LogDirection, message: JsonRpcMessage, agentId?: string | null, sessionId?: string | null): void {
     const entry = {
       id: uuidv4(),
       timestamp: Date.now(),
       direction,
-      sessionId: this.sessionId,
-      agentId: this.agentId,
+      sessionId: sessionId || null,
+      agentId: agentId || null,
       method: (message as any).method || null,
       message
     }
-    // Fire and forget - don't block on DB write
     insertLog(entry).catch((err) => {
       console.error('[Logger] Failed to persist log:', err)
     })
   }
 
-  async getEntries(options?: { limit?: number; offset?: number }): Promise<LogRow[]> {
+  async getEntries(options?: { limit?: number; offset?: number; agentId?: string }): Promise<LogRow[]> {
     return queryLogs({
       limit: options?.limit || 500,
       offset: options?.offset || 0,
-      agentId: this.agentId || undefined
+      agentId: options?.agentId
     })
   }
 }

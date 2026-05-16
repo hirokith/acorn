@@ -118,9 +118,9 @@ export default function Settings() {
         env: parseEnv(form.env),
       }
       const result = await (window as any).acpApi.testConnection(config)
-      setTestResult(result)
+      if (showForm) setTestResult(result)
     } catch (e: any) {
-      setTestResult({ success: false, message: e.message || 'Test connection failed' })
+      if (showForm) setTestResult({ success: false, message: e.message || 'Test connection failed' })
     } finally {
       setTestingConnection(false)
     }

@@ -1,4 +1,4 @@
-import { resolve } from 'path'
+import { resolve, basename } from 'path'
 import { readFileSync, readdirSync, copyFileSync, mkdirSync, existsSync } from 'fs'
 import { defineConfig } from 'electron-vite'
 import react from '@vitejs/plugin-react'
@@ -14,7 +14,13 @@ function materialFileIconsPlugin(): Plugin {
       server.middlewares.use((req, res, next) => {
         if (req.url?.startsWith('/file-icons/')) {
           const fileName = req.url.replace('/file-icons/', '')
-          const filePath = resolve(materialIconsDir, fileName)
+          // Prevent path traversal
+          if (fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
+            res.statusCode = 403
+            res.end('Forbidden')
+            return
+          }
+          const filePath = resolve(materialIconsDir, basename(fileName))
           try {
             const svg = readFileSync(filePath)
             res.setHeader('Content-Type', 'image/svg+xml')

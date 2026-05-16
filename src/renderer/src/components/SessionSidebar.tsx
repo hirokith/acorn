@@ -190,7 +190,7 @@ export default function SessionSidebar({ activeAgentId }: { activeAgentId: strin
             if (e.key === 'Enter') handleCreateSession()
           }}
         >
-          <div className="bg-panel-bg border border-border rounded-lg shadow-xl w-[420px] max-h-[80vh] overflow-y-auto" ref={(el) => el?.focus()} tabIndex={-1}>
+          <div className="bg-panel-bg border border-border rounded-lg shadow-xl w-[420px] max-h-[80vh] overflow-y-auto" ref={(el) => { if (el && !el.dataset.focused) { el.focus(); el.dataset.focused = 'true' } }} tabIndex={-1}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <h3 className="text-sm font-medium text-text">New Session</h3>
               <button

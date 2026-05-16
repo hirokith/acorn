@@ -17,56 +17,62 @@ export interface LogRow {
 let db: SqlJsDatabase | null = null
 let dbPath: string = ''
 let saveTimer: ReturnType<typeof setTimeout> | null = null
+let dbInitPromise: Promise<SqlJsDatabase> | null = null
 
 async function getDb(): Promise<SqlJsDatabase> {
   if (db) return db
+  if (dbInitPromise) return dbInitPromise
 
-  const SQL = await initSqlJs()
+  dbInitPromise = (async () => {
+    const SQL = await initSqlJs()
 
-  const userDataPath = app.getPath('userData')
-  mkdirSync(userDataPath, { recursive: true })
-  dbPath = join(userDataPath, 'axon-logs.db')
+    const userDataPath = app.getPath('userData')
+    mkdirSync(userDataPath, { recursive: true })
+    dbPath = join(userDataPath, 'axon-logs.db')
 
-  if (existsSync(dbPath)) {
-    const buffer = readFileSync(dbPath)
-    db = new SQL.Database(buffer)
-  } else {
-    db = new SQL.Database()
-  }
+    if (existsSync(dbPath)) {
+      const buffer = readFileSync(dbPath)
+      db = new SQL.Database(buffer)
+    } else {
+      db = new SQL.Database()
+    }
 
-  db.run(`
-    CREATE TABLE IF NOT EXISTS logs (
-      id TEXT PRIMARY KEY,
-      timestamp INTEGER NOT NULL,
-      direction TEXT NOT NULL,
-      session_id TEXT,
-      agent_id TEXT,
-      method TEXT,
-      message TEXT NOT NULL
-    )
-  `)
-  db.run(`CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs(timestamp)`)
-  db.run(`CREATE INDEX IF NOT EXISTS idx_logs_session ON logs(session_id)`)
-  db.run(`CREATE INDEX IF NOT EXISTS idx_logs_agent ON logs(agent_id)`)
+    db.run(`
+      CREATE TABLE IF NOT EXISTS logs (
+        id TEXT PRIMARY KEY,
+        timestamp INTEGER NOT NULL,
+        direction TEXT NOT NULL,
+        session_id TEXT,
+        agent_id TEXT,
+        method TEXT,
+        message TEXT NOT NULL
+      )
+    `)
+    db.run(`CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs(timestamp)`)
+    db.run(`CREATE INDEX IF NOT EXISTS idx_logs_session ON logs(session_id)`)
+    db.run(`CREATE INDEX IF NOT EXISTS idx_logs_agent ON logs(agent_id)`)
 
-  db.run(`
-    CREATE TABLE IF NOT EXISTS structured_logs (
-      id TEXT PRIMARY KEY,
-      timestamp INTEGER NOT NULL,
-      session_id TEXT,
-      type TEXT NOT NULL,
-      title TEXT NOT NULL,
-      status TEXT,
-      content TEXT,
-      kind TEXT,
-      raw_input TEXT,
-      raw_output TEXT
-    )
-  `)
-  db.run(`CREATE INDEX IF NOT EXISTS idx_slogs_timestamp ON structured_logs(timestamp)`)
-  db.run(`CREATE INDEX IF NOT EXISTS idx_slogs_session ON structured_logs(session_id)`)
+    db.run(`
+      CREATE TABLE IF NOT EXISTS structured_logs (
+        id TEXT PRIMARY KEY,
+        timestamp INTEGER NOT NULL,
+        session_id TEXT,
+        type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        status TEXT,
+        content TEXT,
+        kind TEXT,
+        raw_input TEXT,
+        raw_output TEXT
+      )
+    `)
+    db.run(`CREATE INDEX IF NOT EXISTS idx_slogs_timestamp ON structured_logs(timestamp)`)
+    db.run(`CREATE INDEX IF NOT EXISTS idx_slogs_session ON structured_logs(session_id)`)
 
-  return db
+    return db
+  })()
+
+  return dbInitPromise
 }
 
 function scheduleSave(): void {
@@ -100,9 +106,9 @@ export async function insertLog(entry: {
       entry.id,
       entry.timestamp,
       entry.direction,
-      entry.sessionId || null,
-      entry.agentId || null,
-      entry.method || null,
+      entry.sessionId ?? null,
+      entry.agentId ?? null,
+      entry.method ?? null,
       typeof entry.message === 'string' ? entry.message : JSON.stringify(entry.message)
     ]
   )
@@ -240,14 +246,14 @@ export async function insertStructuredLog(entry: {
     [
       entry.id,
       entry.timestamp,
-      entry.sessionId || null,
+      entry.sessionId ?? null,
       entry.type,
       entry.title,
-      entry.status || null,
-      entry.content || null,
-      entry.kind || null,
-      entry.rawInput ? JSON.stringify(entry.rawInput) : null,
-      entry.rawOutput ? JSON.stringify(entry.rawOutput) : null
+      entry.status ?? null,
+      entry.content ?? null,
+      entry.kind ?? null,
+      entry.rawInput != null ? JSON.stringify(entry.rawInput) : null,
+      entry.rawOutput != null ? JSON.stringify(entry.rawOutput) : null
     ]
   )
   scheduleSave()

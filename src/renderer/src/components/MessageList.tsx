@@ -214,7 +214,7 @@ export default function MessageList() {
     }
     el.addEventListener('scroll', handleScroll)
     return () => el.removeEventListener('scroll', handleScroll)
-  }, [])
+  })
 
   useEffect(() => {
     if (!isUserScrolledUp.current) {
