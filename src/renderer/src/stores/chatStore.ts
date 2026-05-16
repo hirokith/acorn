@@ -271,9 +271,22 @@ export const useChatStore = create<ChatState>()(
     {
       name: 'acp-chat-history',
       storage: {
-        getItem: async () => {
+        getItem: async (name: string) => {
           const data = await (window as any).acpApi.chatHistory.get()
-          return data ? { state: data } : null
+          if (data) return { state: data }
+
+          // One-time migration from localStorage (v0.1.0 upgrade)
+          const legacy = localStorage.getItem(name)
+          if (legacy) {
+            try {
+              const parsed = JSON.parse(legacy)
+              await (window as any).acpApi.chatHistory.set(parsed.state)
+              localStorage.removeItem(name)
+              return parsed
+            } catch {}
+          }
+
+          return null
         },
         setItem: async (_name: string, value: { state: any }) => {
           await (window as any).acpApi.chatHistory.set(value.state)

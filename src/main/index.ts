@@ -281,7 +281,7 @@ app.whenReady().then(() => {
 
   // Chat history IPC handlers
   ipcMain.handle(IpcChannel.ChatHistoryGet, () => getChatHistory())
-  ipcMain.handle(IpcChannel.ChatHistorySet, (_, data: any) => { setChatHistory(data) })
+  ipcMain.handle(IpcChannel.ChatHistorySet, (_, data: any) => setChatHistory(data))
 
   // Log query IPC handlers
   ipcMain.handle(IpcChannel.LogsQuery, (_, options?: any) => queryLogs(options || {}))
